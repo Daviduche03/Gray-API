@@ -1,9 +1,9 @@
-("use strict");
+"use strict";
 
 // Imports dependencies and set up http server
-const express = require("express"),
-  { urlencoded, json } = require("body-parser"),
-  app = express();
+const express = require("express");
+const { urlencoded, json } = require("body-parser");
+const app = express();
 const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
   apiKey: process.env.OPENAI,
@@ -76,21 +76,20 @@ function callSendAPI(sender_psid, response) {
   };
 
   // Send the HTTP request to the Messenger Platform
-  axios({
-    url: "https://graph.facebook.com/v2.6/me/messages",
-    headers: {
-      Authorization: `Bearer ${process.env.PAGE_ACCESS_TOKEN}`,
-    },
-    data: request_body,
-    method: "POST",
-  })
-    .then((response) => {
-      console.log("message sent!");
+  axios
+    .post("https://graph.facebook.com/v12.0/me/messages", request_body, {
+      params: {
+        access_token: process.env.PAGE_ACCESS_TOKEN,
+      },
+    })
+    .then(() => {
+      console.log("Message sent!");
     })
     .catch((error) => {
       console.error(`Error occurred while sending message: ${error}`);
     });
 }
+
 // Respond with 'Hello World' when a GET request is made to the homepage
 app.get("/", function (req, res) {
   res.send("hey there boi");
@@ -128,17 +127,14 @@ app.post("/webhook", (req, res) => {
       // Gets the body of the webhook event
       let webhook_event = entry.messaging[0];
       console.log(webhook_event);
-
       // Get the sender PSID
-      let sender_psid = webhook_event.sender.id;
+      const sender_psid = webhook_event.sender.id;
       console.log("Sender PSID: " + sender_psid);
 
-      // Check if the event is a message or postback and
-      // pass the event to the appropriate handler function
-      if (webhook_event.message) {
+      // Check if the sender is a user
+      if (sender_psid !== process.env.PAGE_ID) {
+        // The sender is a user, so reply to the message
         handleMessage(sender_psid, webhook_event.message);
-      } else if (webhook_event.postback) {
-        handlePostback(sender_psid, webhook_event.postback);
       }
     });
 
@@ -150,6 +146,6 @@ app.post("/webhook", (req, res) => {
   }
 });
 
-// listen for requests :)
-const port = process.env.PORT;
+// listen for requests
+const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server started on port ${port}`));
